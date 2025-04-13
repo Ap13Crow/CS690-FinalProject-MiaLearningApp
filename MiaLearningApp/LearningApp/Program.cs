@@ -3,7 +3,7 @@ using LearningApp.Data;
 using LearningApp.Models;
 using Microsoft.EntityFrameworkCore;
 
-Titlespace LearningApp
+namespace LearningApp
 {
     internal class Program
     {
