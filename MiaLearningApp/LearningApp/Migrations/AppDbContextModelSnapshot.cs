@@ -168,6 +168,41 @@ namespace LearningApp.Migrations
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("LearningApp.Models.Vocabulary", b =>
+                {
+                    b.Property<int>("VocabularyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Example")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Explanation")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceLanguage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceTerm")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetLanguage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetTerm")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("VocabularyId");
+
+                    b.ToTable("Vocabulary");
+                });
+
             modelBuilder.Entity("NoteTag", b =>
                 {
                     b.Property<int>("NotesNoteId")

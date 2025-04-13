@@ -202,7 +202,8 @@ namespace LearningApp
                 Console.WriteLine("1) Add a New Word");
                 Console.WriteLine("2) View All Vocabulary Entries");
                 Console.WriteLine("3) Search Vocabulary");
-                Console.WriteLine("4) Return to Main Menu");
+                Console.WriteLine("4) Take a Quiz");
+                Console.WriteLine("5) Return to Main Menu");
                 Console.Write("Enter your choice: ");
                 var choice = Console.ReadLine();
 
@@ -218,6 +219,9 @@ namespace LearningApp
                         SearchVocabulary();
                         break;
                     case "4":
+                        TakeVocabularyQuiz();
+                        break;
+                    case "5":
                         return; // back to main
                     default:
                         Console.WriteLine("Invalid choice!");
@@ -265,7 +269,7 @@ namespace LearningApp
                     Explanation = explanation,
                     Example = example
                 };
-                context.Vocabularies.Add(vocab);
+                context.Vocabulary.Add(vocab);
                 context.SaveChanges();
                 Console.WriteLine("Vocabulary entry added successfully!");
             }
@@ -279,7 +283,7 @@ namespace LearningApp
 
             using (var context = new AppDbContext())
             {
-                var vocabList = context.Vocabularies.ToList();
+                var vocabList = context.Vocabulary.ToList();
                 if (!vocabList.Any())
                 {
                     Console.WriteLine("No vocabulary entries found.");
@@ -315,7 +319,7 @@ namespace LearningApp
             using (var context = new AppDbContext())
             {
                 // Search either in SourceTerm or TargetTerm
-                var results = context.Vocabularies
+                var results = context.Vocabulary
                     .Where(v => v.SourceTerm.Contains(term) || v.TargetTerm.Contains(term))
                     .ToList();
 
@@ -331,6 +335,59 @@ namespace LearningApp
                         Console.WriteLine($"[{v.SourceLanguage} -> {v.TargetLanguage}] {v.SourceTerm} = {v.TargetTerm}");
                     }
                 }
+            }
+
+            Pause();
+        }
+        private static void TakeVocabularyQuiz()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Vocabulary Quiz ===");
+
+            // Choose how many random questions:
+            Console.Write("How many questions? (default 5): ");
+            var input = Console.ReadLine();
+            int questionCount = 5;
+            int.TryParse(input, out questionCount);
+            if (questionCount <= 0) questionCount = 5;
+
+            using (var context = new AppDbContext())
+            {
+                var vocabList = context.Vocabulary.ToList();
+                if (!vocabList.Any())
+                {
+                    Console.WriteLine("No vocabulary available to quiz on!");
+                    Pause();
+                    return;
+                }
+
+                // If the user requests more questions than we have words, just limit to our size
+                if (questionCount > vocabList.Count)
+                    questionCount = vocabList.Count;
+
+                // Shuffle or pick random words
+                var random = new Random();
+                var shuffled = vocabList.OrderBy(x => random.Next()).Take(questionCount).ToList();
+
+                int correctCount = 0;
+
+                // Ask questions
+                foreach (var v in shuffled)
+                {
+                    Console.WriteLine($"\nTranslate from {v.SourceLanguage} to {v.TargetLanguage}: {v.SourceTerm}");
+                    var userAnswer = Console.ReadLine() ?? "";
+                    if (userAnswer.Trim().Equals(v.TargetTerm, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.WriteLine("Correct!");
+                        correctCount++;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Incorrect. Correct answer: {v.TargetTerm}");
+                    }
+                }
+
+                Console.WriteLine($"\nQuiz finished! You got {correctCount} out of {questionCount} correct.");
             }
 
             Pause();
@@ -380,7 +437,7 @@ namespace LearningApp
                 var totalNotes = context.Notes.Count();
 
                 // Vocabulary (we'll add a new Vocabulary model soon)
-                var totalVocab = context.Vocabularies.Count();  // This will require a new DbSet<Vocabulary>
+                var totalVocab = context.Vocabulary.Count();  // This will require a new DbSet<Vocabulary>
 
                 Console.WriteLine($"Total Courses: {totalCourses}");
                 Console.WriteLine($"Average Course Progress: {avgProgress:F1}%");

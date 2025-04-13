@@ -45,6 +45,24 @@ namespace LearningApp.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Vocabulary",
+                columns: table => new
+                {
+                    VocabularyId = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    SourceLanguage = table.Column<string>(type: "TEXT", nullable: false),
+                    TargetLanguage = table.Column<string>(type: "TEXT", nullable: false),
+                    SourceTerm = table.Column<string>(type: "TEXT", nullable: false),
+                    TargetTerm = table.Column<string>(type: "TEXT", nullable: false),
+                    Explanation = table.Column<string>(type: "TEXT", nullable: false),
+                    Example = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Vocabulary", x => x.VocabularyId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Modules",
                 columns: table => new
                 {
@@ -170,6 +188,9 @@ namespace LearningApp.Migrations
 
             migrationBuilder.DropTable(
                 name: "Resources");
+
+            migrationBuilder.DropTable(
+                name: "Vocabulary");
 
             migrationBuilder.DropTable(
                 name: "Notes");

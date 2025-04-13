@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LearningApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250413184427_AddVocabularyModel")]
+    [Migration("20250413195814_AddVocabularyModel")]
     partial class AddVocabularyModel
     {
         /// <inheritdoc />
@@ -169,6 +169,41 @@ namespace LearningApp.Migrations
                     b.HasKey("TagId");
 
                     b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("LearningApp.Models.Vocabulary", b =>
+                {
+                    b.Property<int>("VocabularyId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Example")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Explanation")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceLanguage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceTerm")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetLanguage")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetTerm")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("VocabularyId");
+
+                    b.ToTable("Vocabulary");
                 });
 
             modelBuilder.Entity("NoteTag", b =>
