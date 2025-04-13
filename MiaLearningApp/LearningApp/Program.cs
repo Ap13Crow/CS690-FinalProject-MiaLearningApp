@@ -3,7 +3,7 @@ using LearningApp.Data;
 using LearningApp.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LearningApp
+Titlespace LearningApp
 {
     internal class Program
     {
@@ -82,7 +82,7 @@ namespace LearningApp
                     for (int i = 0; i < courses.Count; i++)
                     {
                         var c = courses[i];
-                        Console.WriteLine($"{i + 1}) {c.Name} - {c.Progress}% complete (Notes: {c.Notes.Count})");
+                        Console.WriteLine($"{i + 1}) {c.Title} - {c.Progress}% complete (Notes: {c.Notes.Count})");
                     }
 
                     Console.WriteLine("\nSelect a course number to see details, or press Enter to go back:");
@@ -99,7 +99,7 @@ namespace LearningApp
         private static void ViewCourseDetails(Course course)
         {
             Console.Clear();
-            Console.WriteLine($"=== {course.Name} Details ===");
+            Console.WriteLine($"=== {course.Title} Details ===");
             Console.WriteLine($"Progress: {course.Progress}%");
             if (course.Notes.Count > 0)
             {
@@ -119,27 +119,27 @@ namespace LearningApp
         {
             Console.Clear();
             Console.WriteLine("=== Add Course ===");
-            Console.Write("Enter a new course name: ");
-            var name = Console.ReadLine() ?? "";
+            Console.Write("Enter a new course title: ");
+            var title = Console.ReadLine() ?? "";
 
             using (var context = new AppDbContext())
             {
-                // Check if a course with the same name already exists
-                bool exists = context.Courses.Any(c => c.Name.ToLower() == name.ToLower());
+                // Check if a course with the same title already exists
+                bool exists = context.Courses.Any(c => c.Title.ToLower() == title.ToLower());
                 if (exists)
                 {
-                    Console.WriteLine("A course with this name already exists!");
+                    Console.WriteLine("A course with this title already exists!");
                 }
                 else
                 {
                     var course = new Course
                     {
-                        Name = name,
+                        Title = title,
                         Progress = 0
                     };
                     context.Courses.Add(course);
                     context.SaveChanges();
-                    Console.WriteLine($"Course '{name}' created successfully.");
+                    Console.WriteLine($"Course '{title}' created successfully.");
                 }
             }
             Pause();
@@ -162,20 +162,20 @@ namespace LearningApp
 
                 for (int i = 0; i < courses.Count; i++)
                 {
-                    Console.WriteLine($"{i + 1}) {courses[i].Name} - {courses[i].Progress}%");
+                    Console.WriteLine($"{i + 1}) {courses[i].Title} - {courses[i].Progress}%");
                 }
                 Console.Write("Select a course number: ");
                 var input = Console.ReadLine();
                 if (int.TryParse(input, out int index) && index > 0 && index <= courses.Count)
                 {
                     var selectedCourse = courses[index - 1];
-                    Console.Write($"Enter new progress % for {selectedCourse.Name} (0-100): ");
+                    Console.Write($"Enter new progress % for {selectedCourse.Title} (0-100): ");
                     var pInput = Console.ReadLine();
                     if (int.TryParse(pInput, out int newProgress))
                     {
                         selectedCourse.Progress = Math.Max(0, Math.Min(100, newProgress));
                         context.SaveChanges();
-                        Console.WriteLine($"{selectedCourse.Name} progress updated to {selectedCourse.Progress}%");
+                        Console.WriteLine($"{selectedCourse.Title} progress updated to {selectedCourse.Progress}%");
                     }
                     else
                     {
@@ -233,7 +233,7 @@ namespace LearningApp
 
                 for (int i = 0; i < courses.Count; i++)
                 {
-                    Console.WriteLine($"{i + 1}) {courses[i].Name}");
+                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
                 }
                 Console.Write("Select a course number for the note: ");
                 var input = Console.ReadLine();
@@ -277,14 +277,14 @@ namespace LearningApp
 
                 for (int i = 0; i < courses.Count; i++)
                 {
-                    Console.WriteLine($"{i+1}) {courses[i].Name} (Notes: {courses[i].Notes.Count})");
+                    Console.WriteLine($"{i+1}) {courses[i].Title} (Notes: {courses[i].Notes.Count})");
                 }
                 Console.Write("Select a course to list notes: ");
                 var input = Console.ReadLine();
                 if (int.TryParse(input, out int idx) && idx > 0 && idx <= courses.Count)
                 {
                     var selected = courses[idx - 1];
-                    Console.WriteLine($"\nNotes for {selected.Name}:");
+                    Console.WriteLine($"\nNotes for {selected.Title}:");
                     foreach (var note in selected.Notes)
                     {
                         Console.WriteLine($"- {note.Content}");
@@ -321,7 +321,7 @@ namespace LearningApp
                     Console.WriteLine($"Found {results.Count} notes:");
                     foreach (var note in results)
                     {
-                        Console.WriteLine($"- [{note.Course?.Name}] {note.Content}");
+                        Console.WriteLine($"- [{note.Course?.Title}] {note.Content}");
                     }
                 }
             }
