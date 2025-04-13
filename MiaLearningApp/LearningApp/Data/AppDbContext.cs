@@ -5,21 +5,27 @@ namespace LearningApp.Data
 {
     public class AppDbContext : DbContext
     {
-        // Declare tables as DbSets
+        // 1) Parameterless constructor for your main app (if you need OnConfiguring):
+        public AppDbContext() { }
+
+        // 2) Constructor for passing options in unit tests (or dependency injection):
+        public AppDbContext(DbContextOptions<AppDbContext> options)
+            : base(options)
+        {
+        }
+
+        // Existing override - uses SQLite if no options are provided:
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+                optionsBuilder.UseSqlite("Data Source=MiaLearning.db");
+            }
+        }// Declare tables as DbSets
         public DbSet<Course> Courses => Set<Course>();
         public DbSet<Module> Modules => Set<Module>();
         public DbSet<Note> Notes => Set<Note>();
         public DbSet<Tag> Tags => Set<Tag>();
         public DbSet<Resource> Resources => Set<Resource>();
-
-        // Option A: override OnConfiguring (simplest for a console app)
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            if (!optionsBuilder.IsConfigured)
-            {
-                // Store data in local SQLite file: "MiaLearning.db"
-                optionsBuilder.UseSqlite("Data Source=MiaLearning.db");
-            }
-        }
     }
 }
