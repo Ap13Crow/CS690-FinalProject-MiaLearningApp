@@ -1,9 +1,5 @@
 # CS690-FinalProject-MiaLearningApp
-<p align="center">
-  <img src="docs/images/main-menu.png" alt="Mia Learning App Console Screenshot" width="700">
-</p>
-
-# Mia Learning App
+## Mia Learning App
 
 A cross‑platform .NET 8 console application that helps lifelong learners:
 
@@ -19,16 +15,21 @@ A cross‑platform .NET 8 console application that helps lifelong learners:
 
 ---
 
-## ✨ Screenshots
-
-| Main Menu | Course‑Modules | Vocabulary Quiz |
-|-----------|----------------|-----------------|
-| ![menu](docs/images/main-menu.png) | ![modules](docs/images/modules.png) | ![quiz](docs/images/quiz.png) |
-
----
-
 ## 🚀 Quick Start
 
+### Download the executable
+
+Go to the latest release:
+https://github.com/Ap13Crow/CS690-FinalProject-MiaLearningApp/releases
+Download the executable called Source code.zip
+Unzip it in your local directory
+
+### Running the application
+
+Make sure to install dotnet runtime .NET Runtime
+Go inside the directory (CS690-FinalProject-MiaLearningApp-2.0.0) you have unzipped
+Run the following command in terminal
+dotnet BusShuttle.dll
 ```bash
 # download release, then…
 unzip MiaLearningApp-v2.1.0.zip
