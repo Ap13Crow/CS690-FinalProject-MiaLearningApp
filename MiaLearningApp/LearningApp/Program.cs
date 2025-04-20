@@ -189,13 +189,224 @@ namespace LearningApp
         }
 
         // ───────────────────────── Vocabulary  (unchanged) ───────────────────
-        private static void ManageVocabulary() { /* keep your earlier code */ }
-        private static void TakeVocabularyQuiz() { /* keep earlier quiz */ }
+        private static void ManageVocabulary()
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("=== Vocabulary ===");
+                Console.WriteLine("1) Add word");
+                Console.WriteLine("2) List all");
+                Console.WriteLine("3) Search");
+                Console.WriteLine("4) Quiz");
+                Console.WriteLine("0) Back");
+                var choice = Console.ReadLine();
+                switch (choice)
+                {
+                    case "1": AddVocabularyEntry();   break;
+                    case "2": ViewAllVocabulary();    break;
+                    case "3": SearchVocabulary();     break;
+                    case "4": TakeVocabularyQuiz();   break;
+                    case "0": return;
+                    default:  Console.WriteLine("Bad choice"); Pause(); break;
+                }
+            }
+        }
+
+        private static void TakeVocabularyQuiz()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Vocabulary Quiz ===");
+            Console.Write("How many questions? (default 5, 0 to cancel): ");
+            var numText = Console.ReadLine();
+            if (numText?.Trim() == "0") return;                     // cancel
+
+            int.TryParse(numText, out int questionCount);
+            if (questionCount <= 0) questionCount = 5;
+
+            using var ctx = new AppDbContext();
+            var vocabList = ctx.Vocabulary
+                            .Where(v => !v.Mastered)            // quiz only un‑mastered words
+                            .ToList();
+            if (!vocabList.Any())
+            {
+                Console.WriteLine("No vocabulary to quiz on!");
+                Pause();
+                return;
+            }
+            if (questionCount > vocabList.Count) questionCount = vocabList.Count;
+
+            var rnd  = new Random();
+            var pool = vocabList.OrderBy(_ => rnd.Next())
+                                .Take(questionCount)
+                                .ToList();
+
+            int correct = 0;
+            foreach (var v in pool)
+            {
+                Console.WriteLine($"\nTranslate from {v.SourceLanguage} to {v.TargetLanguage}: {v.SourceTerm}");
+                var ans = Console.ReadLine() ?? "";
+                if (ans.Trim().Equals(v.TargetTerm, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("✅ Correct!");
+                    v.Mastered = true;                              // mark mastered
+                    correct++;
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Incorrect. Correct answer: {v.TargetTerm}");
+                }
+                ctx.SaveChanges();                                 // update mastery flag
+            }
+
+            Console.WriteLine($"\nQuiz finished! Score: {correct}/{questionCount}");
+            Pause();
+        }
 
         // ───────────────────── Modules / Resources / Quizzes  ────────────────
-        private static void ManageModules()   { /* code from last response */ }
-        private static void ManageResources() { /* code from last response */ }
-        private static void ManageQuizzes()   { /* code from last response */ }
+        private static void ManageModules()
+        {
+            using var ctx = new AppDbContext();
+            var courses = ctx.Courses.Include(c => c.Modules).ToList();
+            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
+
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("=== Modules ===");
+                for (int i = 0; i < courses.Count; i++)
+                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
+                Console.WriteLine("0) Back");
+                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
+                if (ci == 0) return;
+
+                var course = courses[ci - 1];
+                Console.Clear();
+                Console.WriteLine($"Modules for {course.Title}");
+                Console.WriteLine("1) Add   2) Toggle complete   0) Back");
+                var sub = Console.ReadLine();
+                if (sub == "0") continue;
+
+                if (sub == "1")
+                {
+                    Console.Write("Module title: ");
+                    var mt = Console.ReadLine() ?? "";
+                    if (!string.IsNullOrWhiteSpace(mt))
+                    {
+                        course.Modules.Add(new Module { Title = mt });
+                        ctx.SaveChanges();
+                    }
+                }
+                else if (sub == "2")
+                {
+                    for (int i = 0; i < course.Modules.Count; i++)
+                        Console.WriteLine($"{i + 1}) {(course.Modules[i].IsCompleted ? "[x]" : "[ ]")} {course.Modules[i].Title}");
+                    if (int.TryParse(Console.ReadLine(), out int mi) &&
+                        mi >= 1 && mi <= course.Modules.Count)
+                    {
+                        course.Modules[mi - 1].IsCompleted = !course.Modules[mi - 1].IsCompleted;
+                        ctx.SaveChanges();
+                    }
+                }
+            }
+        }
+        private static void ManageResources()
+        {
+            using var ctx = new AppDbContext();
+            var courses = ctx.Courses.Include(c => c.Resources).ToList();
+            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
+
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("=== Resources ===");
+                for (int i = 0; i < courses.Count; i++)
+                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
+                Console.WriteLine("0) Back");
+                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
+                if (ci == 0) return;
+
+                var course = courses[ci - 1];
+                Console.Clear();
+                Console.WriteLine($"Resources for {course.Title}");
+                foreach (var r in course.Resources)
+                    Console.WriteLine($"• {r.Url} ({r.Description})");
+                Console.WriteLine("\n1) Add   2) Remove   0) Back");
+                var act = Console.ReadLine();
+                if (act == "0") continue;
+
+                if (act == "1")
+                {
+                    Console.Write("URL: "); var url = Console.ReadLine() ?? "";
+                    Console.Write("Description: "); var desc = Console.ReadLine() ?? "";
+                    if (!string.IsNullOrWhiteSpace(url))
+                    {
+                        course.Resources.Add(new Resource { Url = url, Description = desc });
+                        ctx.SaveChanges();
+                    }
+                }
+                else if (act == "2")
+                {
+                    for (int i = 0; i < course.Resources.Count; i++)
+                        Console.WriteLine($"{i + 1}) {course.Resources[i].Url}");
+                    if (int.TryParse(Console.ReadLine(), out int ri) &&
+                        ri >= 1 && ri <= course.Resources.Count)
+                    {
+                        ctx.Resources.Remove(course.Resources[ri - 1]);
+                        ctx.SaveChanges();
+                    }
+                }
+            }
+        }
+        private static void ManageQuizzes()
+        {
+            using var ctx = new AppDbContext();
+            var courses = ctx.Courses.Include(c => c.Quizzes).ToList();
+            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
+
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("=== Quizzes ===");
+                for (int i = 0; i < courses.Count; i++)
+                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
+                Console.WriteLine("0) Back");
+                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
+                if (ci == 0) return;
+
+                var course = courses[ci - 1];
+                Console.Clear();
+                Console.WriteLine($"Quizzes for {course.Title}");
+                foreach (var q in course.Quizzes)
+                    Console.WriteLine($"• {q.Title} (Due {q.DueDate:d}) {(q.ReminderSent ? "✅" : "")}");
+                Console.WriteLine("\n1) Add   2) Remove   0) Back");
+                var act = Console.ReadLine();
+                if (act == "0") continue;
+
+                if (act == "1")
+                {
+                    Console.Write("Quiz title: ");
+                    var qt = Console.ReadLine() ?? "";
+                    Console.Write("Due (yyyy-MM-dd): ");
+                    if (DateTime.TryParse(Console.ReadLine(), out DateTime due))
+                    {
+                        course.Quizzes.Add(new Quiz { Title = qt, DueDate = due });
+                        ctx.SaveChanges();
+                    }
+                }
+                else if (act == "2")
+                {
+                    for (int i = 0; i < course.Quizzes.Count; i++)
+                        Console.WriteLine($"{i + 1}) {course.Quizzes[i].Title}");
+                    if (int.TryParse(Console.ReadLine(), out int qi) &&
+                        qi >= 1 && qi <= course.Quizzes.Count)
+                    {
+                        ctx.Quizzes.Remove(course.Quizzes[qi - 1]);
+                        ctx.SaveChanges();
+                    }
+                }
+            }
+        }
 
         // ───────────────────────── Helpers ───────────────────────────────────
         private static void Pause() { Console.WriteLine("Press Enter…"); Console.ReadLine(); }
