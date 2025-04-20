@@ -17,45 +17,62 @@ namespace LearningApp
 
             while (true)
             {
-                DisplayMainMenu();
-                var choice = Console.ReadLine()?.Trim();
-
-                switch (choice)
+                DrawMainMenu();
+                switch (Console.ReadLine()?.Trim())
                 {
-                    case "1": ViewCourses();         break;
-                    case "2": AddCourse();           break;
-                    case "3": UpdateProgress();      break;
-                    case "4": ManageNotes();         break;
-                    case "5": ShowProgressSummary(); break;
-                    case "6": ManageVocabulary();    break;
-                    case "7": GlobalSearch();        break;
-                    case "8": ManageModules();       break;
-                    case "9": ManageResources();     break;
-                    case "10": ManageQuizzes();      break;
-                    case "11": return;
-                    default:  Console.WriteLine("Invalid choice."); Pause(); break;
+                    case "1": ManageCoursesMenu();   break;
+                    case "2": ManageNotes();         break;
+                    case "3": ManageVocabulary();    break;
+                    case "4": ManageResources();     break;
+                    case "5": ManageQuizzes();       break;
+                    case "6": GlobalSearch();        break;
+                    case "7": ShowProgressSummary(); break;
+                    case "8": return;
+                    default:  Console.WriteLine("Invalid choice"); Pause(); break;
                 }
             }
         }
 
-        private static void DisplayMainMenu()
+        private static void DrawMainMenu()
         {
             Console.Clear();
             Console.WriteLine("=== My Learning App - Main Menu ===");
-            Console.WriteLine("1) View Courses and Progress");
-            Console.WriteLine("2) Add a New Course");
-            Console.WriteLine("3) Update Progress in a Course");
-            Console.WriteLine("4) Manage Notes");
-            Console.WriteLine("5) View Progress Summary (Dashboard)");
-            Console.WriteLine("6) Manage Vocabulary");
-            Console.WriteLine("7) Global Search");
-            Console.WriteLine("8) Manage Courses & Modules");
-            Console.WriteLine("9) Manage Resources");
-            Console.WriteLine("10) Manage Quizzes");
-            Console.WriteLine("11) Exit");
+            Console.WriteLine("1) Manage Courses & Modules");
+            Console.WriteLine("2) Manage Notes");
+            Console.WriteLine("3) Manage Vocabulary");
+            Console.WriteLine("4) Manage Resources");
+            Console.WriteLine("5) Manage Quizzes");
+            Console.WriteLine("6) Global Search");
+            Console.WriteLine("7) Progess Dashboard");
+            Console.WriteLine("8) Exit");
             Console.Write("Enter your choice: ");
         }
+        private static void ManageCoursesMenu()
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("=== Courses & Modules ===");
+                Console.WriteLine("1) View Courses");
+                Console.WriteLine("2) Add Course");
+                Console.WriteLine("3) Update Course Progress");
+                Console.WriteLine("4) Delete Course");
+                Console.WriteLine("5) Manage Modules");
+                Console.WriteLine("0) Back to Main Menu");
+                var choice = Console.ReadLine();
 
+                switch (choice)
+                {
+                    case "1": ViewCourses();        break;
+                    case "2": AddCourse();          break;
+                    case "3": UpdateProgress();     break;
+                    case "4": DeleteCourse();       break;
+                    case "5": ManageModules();      break;
+                    case "0": return;
+                    default:  Console.WriteLine("Invalid"); Pause(); break;
+                }
+            }
+        }
         // ───────────────────────── Reminder Timer ────────────────────────────
         private static void CheckQuizDue(object? _)
         {
@@ -103,7 +120,6 @@ namespace LearningApp
             }
             Pause();
         }
-
         private static void UpdateProgress()
         {
             using var ctx = new AppDbContext();
@@ -119,7 +135,35 @@ namespace LearningApp
             list[ix - 1].Progress = Math.Clamp(p, 0, 100);
             ctx.SaveChanges();
         }
+        private static void DeleteCourse()
+        {
+            using var ctx = new AppDbContext();
+            var courses = ctx.Courses.Include(c => c.Notes)
+                                    .Include(c => c.Modules)
+                                    .Include(c => c.Resources)
+                                    .Include(c => c.Quizzes)
+                                    .ToList();
 
+            if (!courses.Any()) { Console.WriteLine("No courses to delete."); Pause(); return; }
+
+            Console.Clear();
+            Console.WriteLine("=== Delete Course ===");
+            for (int i = 0; i < courses.Count; i++)
+                Console.WriteLine($"{i + 1}) {courses[i].Title}");
+
+            Console.Write("Select course # to delete (0 = cancel): ");
+            if (!int.TryParse(Console.ReadLine(), out int idx) || idx < 1 || idx > courses.Count)
+                return;
+
+            var doomed = courses[idx - 1];
+            Console.Write($"Are you sure you want to delete '{doomed.Title}'? (y/N) ");
+            if (Console.ReadLine()?.Trim().ToLower() != "y") return;
+
+            ctx.Courses.Remove(doomed);      // cascades to notes/resources/quizzes if FK cascade set
+            ctx.SaveChanges();
+            Console.WriteLine("Course deleted.");
+            Pause();
+        }
         // ───────────────────────── Notes  ───────────────────────────────────
         private static void ManageNotes()
         {
