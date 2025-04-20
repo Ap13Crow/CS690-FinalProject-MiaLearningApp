@@ -70,5 +70,20 @@ namespace LearningApp.Tests
                 Assert.Equal("Course for NoteTest", fetchedNote.Course.Title);
             }
         }
+        [Fact]
+        public void QuizzesTable_ShouldExistInDatabase()
+        {
+            // Adjust path if necessary — this should match your actual DB file
+            var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "LearningApp", "LearningApp.db");
+
+            using var connection = new SqliteConnection($"Data Source={dbPath}");
+            connection.Open();
+
+            var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='Quizzes';";
+
+            var result = cmd.ExecuteScalar();
+            Assert.NotNull(result);  // Table exists if result is not null
+        }
     }
 }
