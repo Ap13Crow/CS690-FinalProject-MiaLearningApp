@@ -17,5 +17,6 @@ namespace LearningApp.Models
         // Additional info: e.g., explanation, usage example
         public string Explanation { get; set; } = "";
         public string Example { get; set; } = "";
+        public bool Mastered { get; set; }
     }
 }

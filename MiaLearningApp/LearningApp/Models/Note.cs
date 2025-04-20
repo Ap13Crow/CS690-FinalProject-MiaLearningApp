@@ -34,6 +34,8 @@ namespace LearningApp.Models
         /// you could also add ModuleId here instead or in addition to CourseId.
         /// </summary>
         public int? CourseId { get; set; }
+        public string Topic { get; set; } = "";
+        public bool IsWeak { get; set; }
         public Course? Course { get; set; }
 
         /// <summary>

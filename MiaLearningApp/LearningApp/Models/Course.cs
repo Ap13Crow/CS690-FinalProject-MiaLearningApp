@@ -7,59 +7,31 @@ namespace LearningApp.Models
     {
         public int CourseId { get; set; }
 
-        /// <summary>
-        /// The title/name of this course or learning goal.
-        /// </summary>
+        /// <summary>The title/name of the course.</summary>
         public string Title { get; set; } = string.Empty;
 
-        /// <summary>
-        /// A short description or summary of the course.
-        /// </summary>
+        /// <summary>Short description.</summary>
         public string Description { get; set; } = string.Empty;
 
-        /// <summary>
-        /// (Optional) Category or subject area, e.g. \"Programming\", \"Language\", etc.
-        /// </summary>
+        /// <summary>Subject area (e.g., Programming, Language).</summary>
         public string Category { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Tracks how far along the user is (0-100%).
-        /// </summary>
+        /// <summary>Completion percentage 0‑100.</summary>
         public int Progress { get; set; }
-
-        /// <summary>
-        /// Start date for this course/goal (optional).
-        /// </summary>
         public DateTime? StartDate { get; set; }
-
-        /// <summary>
-        /// End date or target completion date (optional).
-        /// </summary>
-        public DateTime? EndDate { get; set; }
-
-        /// <summary>
-        /// Date/time when the course entry was created.
-        /// </summary>
+        public DateTime? EndDate   { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        /// <summary>
-        /// Date/time when the course entry was last updated.
-        /// </summary>
         public DateTime? UpdatedAt { get; set; }
 
-        /// <summary>
-        /// One-to-many relationship: a Course can have multiple Modules.
-        /// </summary>
-        public List<Module> Modules { get; set; } = new List<Module>();
+        // Navigation properties
+        public List<Module>   Modules   { get; set; } = new();
+        public List<Note>     Notes     { get; set; } = new();
+        public List<Resource> Resources { get; set; } = new();
+        public List<Quiz>     Quizzes   { get; set; } = new();
 
-        /// <summary>
-        /// One-to-many relationship: a Course can have multiple Notes.
-        /// </summary>
-        public List<Note> Notes { get; set; } = new List<Note>();
 
-        /// <summary>
-        /// One-to-many relationship: a Course can have multiple Resources.
-        /// </summary>
-        public List<Resource> Resources { get; set; } = new List<Resource>();
+        // Quiz reminder
+        public DateTime? NextQuizDate { get; set; }
+        public bool      QuizNotified { get; set; }
     }
 }

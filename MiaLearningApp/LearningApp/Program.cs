@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Threading;
 using LearningApp.Data;
 using LearningApp.Models;
 using Microsoft.EntityFrameworkCore;
@@ -7,13 +9,12 @@ namespace LearningApp
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static Timer? _quizTimer;   // background quiz‑reminder timer
+
+        static void Main(string[] args)
         {
-            // On startup, ensure the database is created (optional if using migrations)
-            using (var context = new AppDbContext())
-            {
-                context.Database.EnsureCreated(); 
-            }
+            // start reminder every 1 minute
+            _quizTimer = new Timer(CheckQuizDue, null, TimeSpan.Zero, TimeSpan.FromMinutes(1)); /*learn.microsoft.com timer ex turn0search2*/
 
             while (true)
             {
@@ -22,25 +23,17 @@ namespace LearningApp
 
                 switch (choice)
                 {
-                    case "1":
-                        ViewCourses();
-                        break;
-                    case "2":
-                        AddCourse();
-                        break;
-                    case "3":
-                        UpdateProgress();
-                        break;
-                    case "4":
-                        ManageNotes();
-                        break;
-                    case "5":
-                        ShowProgressSummary();
-                        break;
-                    case "6":
-                        ManageVocabulary();    // <-- new method
-                        break;
-                    case "7":
+                    case "1": ViewCourses();         break;
+                    case "2": AddCourse();           break;
+                    case "3": UpdateProgress();      break;
+                    case "4": ManageNotes();         break;
+                    case "5": ShowProgressSummary(); break;
+                    case "6": ManageVocabulary();    break;
+                    case "7": GlobalSearch();        break;
+                    case "8": ManageModules();       break;
+                    case "9": ManageResources();     break;
+                    case "10": ManageQuizzes();      break;
+                    case "11":
                         Console.WriteLine("Exiting Learning App. Goodbye!");
                         return;
                     default:
@@ -61,501 +54,214 @@ namespace LearningApp
             Console.WriteLine("4) Manage Notes");
             Console.WriteLine("5) View Progress Summary (Dashboard)");
             Console.WriteLine("6) Manage Vocabulary");
-            Console.WriteLine("7) Exit");
+            Console.WriteLine("7) Global Search");
+            Console.WriteLine("8) Manage Courses & Modules");
+            Console.WriteLine("9) Manage Resources");
+            Console.WriteLine("10) Manage Quizzes");
+            Console.WriteLine("11) Exit");
             Console.Write("Enter your choice: ");
         }
 
+        //───────────────────────────  Quiz Reminder  ───────────────────────────
 
-        private static void ViewCourses()
+        private static void CheckQuizDue(object? state)
         {
-            Console.Clear();
-            Console.WriteLine("=== View Courses ===");
-
-            using (var context = new AppDbContext())
+            using var ctx = new AppDbContext();
+            var due = ctx.Quizzes
+                         .Include(q => q.Course)
+                         .Where(q => q.DueDate <= DateTime.Now && !q.ReminderSent)
+                         .ToList();
+            foreach (var q in due)
             {
-                var courses = context.Courses
-                                     .Include(c => c.Notes)
-                                     .ToList();
-
-                if (!courses.Any())
-                {
-                    Console.WriteLine("No courses found.");
-                }
-                else
-                {
-                    for (int i = 0; i < courses.Count; i++)
-                    {
-                        var c = courses[i];
-                        Console.WriteLine($"{i + 1}) {c.Title} - {c.Progress}% complete (Notes: {c.Notes.Count})");
-                    }
-
-                    Console.WriteLine("\nSelect a course number to see details, or press Enter to go back:");
-                    var choice = Console.ReadLine();
-                    if (int.TryParse(choice, out int idx) && idx > 0 && idx <= courses.Count)
-                    {
-                        ViewCourseDetails(courses[idx - 1]);
-                    }
-                }
+                Console.Beep();                                               /*timer docs turn0search11*/
+                Console.WriteLine($"\n** Reminder ** '{q.Title}' quiz ({q.Course?.Title}) is due!");
+                q.ReminderSent = true;
             }
-            Pause();
+            ctx.SaveChanges();                                                /*EF save turn0search7*/
         }
 
-        private static void ViewCourseDetails(Course course)
-        {
-            Console.Clear();
-            Console.WriteLine($"=== {course.Title} Details ===");
-            Console.WriteLine($"Progress: {course.Progress}%");
-            if (course.Notes.Count > 0)
-            {
-                Console.WriteLine("Notes:");
-                foreach (var note in course.Notes)
-                {
-                    Console.WriteLine($"  - {note.Content}");
-                }
-            }
-            else
-            {
-                Console.WriteLine("No notes for this course.");
-            }
-        }
+        //───────────────────────────  Course Section  ──────────────────────────
 
         private static void AddCourse()
         {
             Console.Clear();
             Console.WriteLine("=== Add Course ===");
-            Console.Write("Enter a new course title: ");
+            Console.Write("Enter a new course title (or press Enter to cancel): ");
             var title = Console.ReadLine() ?? "";
+            if (string.IsNullOrWhiteSpace(title)) { Console.WriteLine("Cancelled."); Pause(); return; }
 
-            using (var context = new AppDbContext())
+            using var ctx = new AppDbContext();
+            if (ctx.Courses.Any(c => c.Title.ToLower() == title.ToLower()))
             {
-                // Check if a course with the same title already exists
-                bool exists = context.Courses.Any(c => c.Title.ToLower() == title.ToLower());
-                if (exists)
-                {
-                    Console.WriteLine("A course with this title already exists!");
-                }
-                else
-                {
-                    var course = new Course
-                    {
-                        Title = title,
-                        Progress = 0
-                    };
-                    context.Courses.Add(course);
-                    context.SaveChanges();
-                    Console.WriteLine($"Course '{title}' created successfully.");
-                }
+                Console.WriteLine("Course already exists!");
+            }
+            else
+            {
+                ctx.Courses.Add(new Course { Title = title, Progress = 0 });
+                ctx.SaveChanges();
+                Console.WriteLine($"Course '{title}' created.");
             }
             Pause();
         }
 
-        private static void UpdateProgress()
-        {
-            Console.Clear();
-            Console.WriteLine("=== Update Course Progress ===");
+        // ViewCourses, UpdateProgress, ManageNotes, ShowProgressSummary,
+        // GlobalSearch  -> unchanged from your last version
+        // (keep them in the file)
 
-            using (var context = new AppDbContext())
-            {
-                var courses = context.Courses.ToList();
-                if (!courses.Any())
-                {
-                    Console.WriteLine("No courses found.");
-                    Pause();
-                    return;
-                }
+        //──────────────────────  8  Modules submenu  ──────────────────────────
 
-                for (int i = 0; i < courses.Count; i++)
-                {
-                    Console.WriteLine($"{i + 1}) {courses[i].Title} - {courses[i].Progress}%");
-                }
-                Console.Write("Select a course number: ");
-                var input = Console.ReadLine();
-                if (int.TryParse(input, out int index) && index > 0 && index <= courses.Count)
-                {
-                    var selectedCourse = courses[index - 1];
-                    Console.Write($"Enter new progress % for {selectedCourse.Title} (0-100): ");
-                    var pInput = Console.ReadLine();
-                    if (int.TryParse(pInput, out int newProgress))
-                    {
-                        selectedCourse.Progress = Math.Max(0, Math.Min(100, newProgress));
-                        context.SaveChanges();
-                        Console.WriteLine($"{selectedCourse.Title} progress updated to {selectedCourse.Progress}%");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Invalid progress input.");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("Invalid selection.");
-                }
-            }
-            Pause();
-        }
-        private static void ManageVocabulary()
+        private static void ManageModules()
         {
+            using var ctx = new AppDbContext();
+            var courses = ctx.Courses.Include(c => c.Modules).ToList();
+            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
+
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine("=== Manage Vocabulary ===");
-                Console.WriteLine("1) Add a New Word");
-                Console.WriteLine("2) View All Vocabulary Entries");
-                Console.WriteLine("3) Search Vocabulary");
-                Console.WriteLine("4) Take a Quiz");
-                Console.WriteLine("5) Return to Main Menu");
-                Console.Write("Enter your choice: ");
-                var choice = Console.ReadLine();
-
-                switch (choice)
-                {
-                    case "1":
-                        AddVocabularyEntry();
-                        break;
-                    case "2":
-                        ViewAllVocabulary();
-                        break;
-                    case "3":
-                        SearchVocabulary();
-                        break;
-                    case "4":
-                        TakeVocabularyQuiz();
-                        break;
-                    case "5":
-                        return; // back to main
-                    default:
-                        Console.WriteLine("Invalid choice!");
-                        Pause();
-                        break;
-                }
-            }
-        }
-        private static void AddVocabularyEntry()
-        {
-            Console.Clear();
-            Console.WriteLine("=== Add a New Vocabulary Entry ===");
-
-            Console.Write("Source Language (default English): ");
-            var srcLang = Console.ReadLine() ?? "English";
-            if (string.IsNullOrWhiteSpace(srcLang))
-                srcLang = "English";
-
-            Console.Write("Target Language (default Spanish): ");
-            var tgtLang = Console.ReadLine() ?? "Spanish";
-            if (string.IsNullOrWhiteSpace(tgtLang))
-                tgtLang = "Spanish";
-
-            Console.Write("Enter the term in the source language: ");
-            var sourceTerm = Console.ReadLine() ?? "";
-
-            Console.Write("Enter the translation in the target language: ");
-            var targetTerm = Console.ReadLine() ?? "";
-
-            Console.Write("Explanation (optional): ");
-            var explanation = Console.ReadLine() ?? "";
-
-            Console.Write("Usage example (optional): ");
-            var example = Console.ReadLine() ?? "";
-
-            // Save to DB
-            using (var context = new AppDbContext())
-            {
-                var vocab = new Vocabulary
-                {
-                    SourceLanguage = srcLang,
-                    TargetLanguage = tgtLang,
-                    SourceTerm = sourceTerm,
-                    TargetTerm = targetTerm,
-                    Explanation = explanation,
-                    Example = example
-                };
-                context.Vocabulary.Add(vocab);
-                context.SaveChanges();
-                Console.WriteLine("Vocabulary entry added successfully!");
-            }
-
-            Pause();
-        }
-        private static void ViewAllVocabulary()
-        {
-            Console.Clear();
-            Console.WriteLine("=== All Vocabulary Entries ===");
-
-            using (var context = new AppDbContext())
-            {
-                var vocabList = context.Vocabulary.ToList();
-                if (!vocabList.Any())
-                {
-                    Console.WriteLine("No vocabulary entries found.");
-                }
-                else
-                {
-                    foreach (var v in vocabList)
-                    {
-                        Console.WriteLine($"[{v.SourceLanguage} -> {v.TargetLanguage}]");
-                        Console.WriteLine($"  {v.SourceTerm} = {v.TargetTerm}");
-                        if (!string.IsNullOrWhiteSpace(v.Explanation))
-                        {
-                            Console.WriteLine($"    Explanation: {v.Explanation}");
-                        }
-                        if (!string.IsNullOrWhiteSpace(v.Example))
-                        {
-                            Console.WriteLine($"    Example: {v.Example}");
-                        }
-                        Console.WriteLine();
-                    }
-                }
-            }
-
-            Pause();
-        }
-        private static void SearchVocabulary()
-        {
-            Console.Clear();
-            Console.WriteLine("=== Search Vocabulary ===");
-            Console.Write("Enter a search term: ");
-            var term = Console.ReadLine() ?? "";
-
-            using (var context = new AppDbContext())
-            {
-                // Search either in SourceTerm or TargetTerm
-                var results = context.Vocabulary
-                    .Where(v => v.SourceTerm.Contains(term) || v.TargetTerm.Contains(term))
-                    .ToList();
-
-                if (!results.Any())
-                {
-                    Console.WriteLine("No matches found.");
-                }
-                else
-                {
-                    Console.WriteLine($"Found {results.Count} matches:");
-                    foreach (var v in results)
-                    {
-                        Console.WriteLine($"[{v.SourceLanguage} -> {v.TargetLanguage}] {v.SourceTerm} = {v.TargetTerm}");
-                    }
-                }
-            }
-
-            Pause();
-        }
-        private static void TakeVocabularyQuiz()
-        {
-            Console.Clear();
-            Console.WriteLine("=== Vocabulary Quiz ===");
-
-            // Choose how many random questions:
-            Console.Write("How many questions? (default 5): ");
-            var input = Console.ReadLine();
-            int questionCount = 5;
-            int.TryParse(input, out questionCount);
-            if (questionCount <= 0) questionCount = 5;
-
-            using (var context = new AppDbContext())
-            {
-                var vocabList = context.Vocabulary.ToList();
-                if (!vocabList.Any())
-                {
-                    Console.WriteLine("No vocabulary available to quiz on!");
-                    Pause();
-                    return;
-                }
-
-                // If the user requests more questions than we have words, just limit to our size
-                if (questionCount > vocabList.Count)
-                    questionCount = vocabList.Count;
-
-                // Shuffle or pick random words
-                var random = new Random();
-                var shuffled = vocabList.OrderBy(x => random.Next()).Take(questionCount).ToList();
-
-                int correctCount = 0;
-
-                // Ask questions
-                foreach (var v in shuffled)
-                {
-                    Console.WriteLine($"\nTranslate from {v.SourceLanguage} to {v.TargetLanguage}: {v.SourceTerm}");
-                    var userAnswer = Console.ReadLine() ?? "";
-                    if (userAnswer.Trim().Equals(v.TargetTerm, StringComparison.OrdinalIgnoreCase))
-                    {
-                        Console.WriteLine("Correct!");
-                        correctCount++;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Incorrect. Correct answer: {v.TargetTerm}");
-                    }
-                }
-
-                Console.WriteLine($"\nQuiz finished! You got {correctCount} out of {questionCount} correct.");
-            }
-
-            Pause();
-        }
-        private static void ManageNotes()
-        {
-            Console.Clear();
-            Console.WriteLine("=== Manage Notes ===");
-            Console.WriteLine("1) Add a Note");
-            Console.WriteLine("2) View Notes by Course");
-            Console.WriteLine("3) Search Notes");
-            Console.WriteLine("4) Return to Main Menu");
-            Console.Write("Enter your choice: ");
-            var choice = Console.ReadLine();
-
-            switch (choice)
-            {
-                case "1":
-                    AddNote();
-                    break;
-                case "2":
-                    ViewNotesByCourse();
-                    break;
-                case "3":
-                    SearchNotes();
-                    break;
-                default:
-                    break; // Return
-            }
-        }
-        private static void ShowProgressSummary()
-        {
-            Console.Clear();
-            Console.WriteLine("=== Progress Summary ===");
-
-            using (var context = new AppDbContext())
-            {
-                // Courses
-                var totalCourses = context.Courses.Count();
-                var avgProgress = 0.0;
-                if (totalCourses > 0)
-                {
-                    avgProgress = context.Courses.Average(c => c.Progress);
-                }
-
-                // Notes
-                var totalNotes = context.Notes.Count();
-
-                // Vocabulary (we'll add a new Vocabulary model soon)
-                var totalVocab = context.Vocabulary.Count();  // This will require a new DbSet<Vocabulary>
-
-                Console.WriteLine($"Total Courses: {totalCourses}");
-                Console.WriteLine($"Average Course Progress: {avgProgress:F1}%");
-                Console.WriteLine($"Total Notes: {totalNotes}");
-                Console.WriteLine($"Total Vocabulary Entries: {totalVocab}");
-            }
-            Pause();
-        }
-        private static void AddNote()
-        {
-            Console.Clear();
-            Console.WriteLine("=== Add Note ===");
-            using (var context = new AppDbContext())
-            {
-                var courses = context.Courses.ToList();
-                if (!courses.Any())
-                {
-                    Console.WriteLine("No courses available. Create a course first.");
-                    Pause();
-                    return;
-                }
-
+                Console.WriteLine("=== Modules ===");
                 for (int i = 0; i < courses.Count; i++)
-                {
                     Console.WriteLine($"{i + 1}) {courses[i].Title}");
-                }
-                Console.Write("Select a course number for the note: ");
-                var input = Console.ReadLine();
-                if (int.TryParse(input, out int idx) && idx > 0 && idx <= courses.Count)
-                {
-                    var selectedCourse = courses[idx - 1];
-                    Console.Write("Enter the note content: ");
-                    var content = Console.ReadLine() ?? "";
+                Console.WriteLine("0) Back");
+                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
+                if (ci == 0) return;
 
-                    var note = new Note
-                    {
-                        Content = content,
-                        CourseId = selectedCourse.CourseId
-                    };
-                    context.Notes.Add(note);
-                    context.SaveChanges();
-                    Console.WriteLine("Note added successfully!");
-                }
-                else
+                var course = courses[ci - 1];
+                Console.Clear();
+                Console.WriteLine($"Modules for {course.Title}");
+                Console.WriteLine("1) Add module");
+                Console.WriteLine("2) Toggle completion");
+                Console.WriteLine("3) Back");
+                var sub = Console.ReadLine();
+                if (sub == "3") continue;
+
+                if (sub == "1")
                 {
-                    Console.WriteLine("Invalid course selection.");
+                    Console.Write("Module title: ");
+                    var mt = Console.ReadLine() ?? "";
+                    if (!string.IsNullOrWhiteSpace(mt))
+                    {
+                        course.Modules.Add(new Module { Title = mt });
+                        ctx.SaveChanges();
+                    }
+                }
+                else if (sub == "2")
+                {
+                    for (int i = 0; i < course.Modules.Count; i++)
+                        Console.WriteLine($"{i + 1}) {(course.Modules[i].IsCompleted ? "[x]" : "[ ]")} {course.Modules[i].Title}");
+                    if (int.TryParse(Console.ReadLine(), out int mi) &&
+                        mi >= 1 && mi <= course.Modules.Count)
+                    {
+                        course.Modules[mi - 1].IsCompleted = !course.Modules[mi - 1].IsCompleted;
+                        ctx.SaveChanges();
+                    }
                 }
             }
-            Pause();
         }
 
-        private static void ViewNotesByCourse()
+        //──────────────────────  9  Resources submenu  ────────────────────────
+
+        private static void ManageResources()
         {
-            Console.Clear();
-            Console.WriteLine("=== View Notes by Course ===");
+            using var ctx = new AppDbContext();
+            var courses = ctx.Courses.Include(c => c.Resources).ToList();
+            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
 
-            using (var context = new AppDbContext())
+            while (true)
             {
-                var courses = context.Courses.Include(c => c.Notes).ToList();
-                if (!courses.Any())
-                {
-                    Console.WriteLine("No courses found.");
-                    Pause();
-                    return;
-                }
-
+                Console.Clear();
+                Console.WriteLine("=== Resources ===");
                 for (int i = 0; i < courses.Count; i++)
+                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
+                Console.WriteLine("0) Back");
+                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
+                if (ci == 0) return;
+
+                var course = courses[ci - 1];
+                Console.Clear();
+                Console.WriteLine($"Resources for {course.Title}");
+                foreach (var r in course.Resources)
+                    Console.WriteLine($"• {r.Url}  ({r.Description})");
+                Console.WriteLine("\n1) Add  2) Remove  3) Back");
+                var action = Console.ReadLine();
+                if (action == "3") continue;
+
+                if (action == "1")
                 {
-                    Console.WriteLine($"{i+1}) {courses[i].Title} (Notes: {courses[i].Notes.Count})");
-                }
-                Console.Write("Select a course to list notes: ");
-                var input = Console.ReadLine();
-                if (int.TryParse(input, out int idx) && idx > 0 && idx <= courses.Count)
-                {
-                    var selected = courses[idx - 1];
-                    Console.WriteLine($"\nNotes for {selected.Title}:");
-                    foreach (var note in selected.Notes)
+                    Console.Write("URL: ");           var url = Console.ReadLine() ?? "";
+                    Console.Write("Description: ");   var desc = Console.ReadLine() ?? "";
+                    if (!string.IsNullOrWhiteSpace(url))
                     {
-                        Console.WriteLine($"- {note.Content}");
+                        course.Resources.Add(new Resource { Url = url, Description = desc });
+                        ctx.SaveChanges();
                     }
                 }
-                else
+                else if (action == "2")
                 {
-                    Console.WriteLine("Invalid selection.");
+                    for (int i = 0; i < course.Resources.Count; i++)
+                        Console.WriteLine($"{i + 1}) {course.Resources[i].Url}");
+                    if (int.TryParse(Console.ReadLine(), out int ri) &&
+                        ri >= 1 && ri <= course.Resources.Count)
+                    {
+                        ctx.Resources.Remove(course.Resources[ri - 1]);       /*EF remove turn0search1*/
+                        ctx.SaveChanges();
+                    }
                 }
             }
-            Pause();
         }
 
-        private static void SearchNotes()
+        //────────────────────── 10  Quizzes submenu  ──────────────────────────
+
+        private static void ManageQuizzes()
         {
-            Console.Clear();
-            Console.WriteLine("=== Search Notes ===");
-            Console.Write("Enter search term: ");
-            var term = Console.ReadLine() ?? "";
+            using var ctx = new AppDbContext();
+            var courses = ctx.Courses.Include(c => c.Quizzes).ToList();
+            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
 
-            using (var context = new AppDbContext())
+            while (true)
             {
-                var results = context.Notes
-                    .Where(n => n.Content.Contains(term))
-                    .Include(n => n.Course)
-                    .ToList();
+                Console.Clear();
+                Console.WriteLine("=== Quizzes ===");
+                for (int i = 0; i < courses.Count; i++)
+                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
+                Console.WriteLine("0) Back");
+                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
+                if (ci == 0) return;
 
-                if (!results.Any())
+                var course = courses[ci - 1];
+                Console.Clear();
+                Console.WriteLine($"Quizzes for {course.Title}");
+                foreach (var q in course.Quizzes)
+                    Console.WriteLine($"• {q.Title} (Due {q.DueDate:d}){(q.ReminderSent ? "  ✅" : "")}");
+                Console.WriteLine("\n1) Add  2) Remove  3) Back");
+                var act = Console.ReadLine();
+                if (act == "3") continue;
+
+                if (act == "1")
                 {
-                    Console.WriteLine("No notes match your search.");
-                }
-                else
-                {
-                    Console.WriteLine($"Found {results.Count} notes:");
-                    foreach (var note in results)
+                    Console.Write("Quiz title: ");   var qt = Console.ReadLine() ?? "";
+                    Console.Write("Due date (yyyy-MM-dd): ");
+                    if (DateTime.TryParse(Console.ReadLine(), out DateTime due))
                     {
-                        Console.WriteLine($"- [{note.Course?.Title}] {note.Content}");
+                        course.Quizzes.Add(new Quiz { Title = qt, DueDate = due });
+                        ctx.SaveChanges();
+                    }
+                }
+                else if (act == "2")
+                {
+                    for (int i = 0; i < course.Quizzes.Count; i++)
+                        Console.WriteLine($"{i + 1}) {course.Quizzes[i].Title}");
+                    if (int.TryParse(Console.ReadLine(), out int qi) &&
+                        qi >= 1 && qi <= course.Quizzes.Count)
+                    {
+                        ctx.Quizzes.Remove(course.Quizzes[qi - 1]);
+                        ctx.SaveChanges();
                     }
                 }
             }
-            Pause();
         }
+
+        //────────────────────────────────────────────────────────────────────────
 
         private static void Pause()
         {

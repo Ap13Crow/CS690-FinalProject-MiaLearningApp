@@ -28,5 +28,7 @@ namespace LearningApp.Data
         public DbSet<Tag> Tags => Set<Tag>();
         public DbSet<Resource> Resources => Set<Resource>();
         public DbSet<Vocabulary> Vocabulary => Set<Vocabulary>();
+        public DbSet<Quiz>      Quizzes    => Set<Quiz>();
+
     }
 }
