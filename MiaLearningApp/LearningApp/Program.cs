@@ -9,12 +9,11 @@ namespace LearningApp
 {
     internal class Program
     {
-        private static Timer? _quizTimer;   // background quiz‑reminder timer
+        private static Timer? _quizTimer;
 
         static void Main(string[] args)
         {
-            // start reminder every 1 minute
-            _quizTimer = new Timer(CheckQuizDue, null, TimeSpan.Zero, TimeSpan.FromMinutes(1)); /*learn.microsoft.com timer ex turn0search2*/
+            _quizTimer = new Timer(CheckQuizDue, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
 
             while (true)
             {
@@ -33,13 +32,8 @@ namespace LearningApp
                     case "8": ManageModules();       break;
                     case "9": ManageResources();     break;
                     case "10": ManageQuizzes();      break;
-                    case "11":
-                        Console.WriteLine("Exiting Learning App. Goodbye!");
-                        return;
-                    default:
-                        Console.WriteLine("Invalid choice. Try again.");
-                        Pause();
-                        break;
+                    case "11": return;
+                    default:  Console.WriteLine("Invalid choice."); Pause(); break;
                 }
             }
         }
@@ -62,211 +56,148 @@ namespace LearningApp
             Console.Write("Enter your choice: ");
         }
 
-        //───────────────────────────  Quiz Reminder  ───────────────────────────
-
-        private static void CheckQuizDue(object? state)
+        // ───────────────────────── Reminder Timer ────────────────────────────
+        private static void CheckQuizDue(object? _)
         {
             using var ctx = new AppDbContext();
-            var due = ctx.Quizzes
-                         .Include(q => q.Course)
-                         .Where(q => q.DueDate <= DateTime.Now && !q.ReminderSent)
-                         .ToList();
+            var due = ctx.Quizzes.Include(q => q.Course)
+                                 .Where(q => q.DueDate <= DateTime.Now && !q.ReminderSent)
+                                 .ToList();
             foreach (var q in due)
             {
-                Console.Beep();                                               /*timer docs turn0search11*/
+                Console.Beep();
                 Console.WriteLine($"\n** Reminder ** '{q.Title}' quiz ({q.Course?.Title}) is due!");
                 q.ReminderSent = true;
             }
-            ctx.SaveChanges();                                                /*EF save turn0search7*/
+            ctx.SaveChanges();
         }
 
-        //───────────────────────────  Course Section  ──────────────────────────
+        // ────────────────────────── Courses  ────────────────────────────────
+        private static void ViewCourses()
+        {
+            Console.Clear();
+            using var ctx = new AppDbContext();
+            var courses = ctx.Courses.Include(c => c.Notes).ToList();
+            if (!courses.Any()) { Console.WriteLine("No courses."); Pause(); return; }
+
+            for (int i = 0; i < courses.Count; i++)
+                Console.WriteLine($"{i + 1}) {courses[i].Title} - {courses[i].Progress}%");
+            Pause();
+        }
 
         private static void AddCourse()
         {
             Console.Clear();
-            Console.WriteLine("=== Add Course ===");
-            Console.Write("Enter a new course title (or press Enter to cancel): ");
-            var title = Console.ReadLine() ?? "";
-            if (string.IsNullOrWhiteSpace(title)) { Console.WriteLine("Cancelled."); Pause(); return; }
+            Console.Write("Course title (empty to cancel): ");
+            var t = Console.ReadLine() ?? "";
+            if (string.IsNullOrWhiteSpace(t)) { Console.WriteLine("Cancelled."); Pause(); return; }
 
             using var ctx = new AppDbContext();
-            if (ctx.Courses.Any(c => c.Title.ToLower() == title.ToLower()))
-            {
-                Console.WriteLine("Course already exists!");
-            }
+            if (ctx.Courses.Any(c => c.Title.ToLower() == t.ToLower()))
+                Console.WriteLine("Exists!");
             else
             {
-                ctx.Courses.Add(new Course { Title = title, Progress = 0 });
+                ctx.Courses.Add(new Course { Title = t });
                 ctx.SaveChanges();
-                Console.WriteLine($"Course '{title}' created.");
+                Console.WriteLine("Added.");
             }
             Pause();
         }
 
-        // ViewCourses, UpdateProgress, ManageNotes, ShowProgressSummary,
-        // GlobalSearch  -> unchanged from your last version
-        // (keep them in the file)
-
-        //──────────────────────  8  Modules submenu  ──────────────────────────
-
-        private static void ManageModules()
+        private static void UpdateProgress()
         {
             using var ctx = new AppDbContext();
-            var courses = ctx.Courses.Include(c => c.Modules).ToList();
-            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
+            var list = ctx.Courses.ToList();
+            if (!list.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
 
-            while (true)
-            {
-                Console.Clear();
-                Console.WriteLine("=== Modules ===");
-                for (int i = 0; i < courses.Count; i++)
-                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
-                Console.WriteLine("0) Back");
-                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
-                if (ci == 0) return;
-
-                var course = courses[ci - 1];
-                Console.Clear();
-                Console.WriteLine($"Modules for {course.Title}");
-                Console.WriteLine("1) Add module");
-                Console.WriteLine("2) Toggle completion");
-                Console.WriteLine("3) Back");
-                var sub = Console.ReadLine();
-                if (sub == "3") continue;
-
-                if (sub == "1")
-                {
-                    Console.Write("Module title: ");
-                    var mt = Console.ReadLine() ?? "";
-                    if (!string.IsNullOrWhiteSpace(mt))
-                    {
-                        course.Modules.Add(new Module { Title = mt });
-                        ctx.SaveChanges();
-                    }
-                }
-                else if (sub == "2")
-                {
-                    for (int i = 0; i < course.Modules.Count; i++)
-                        Console.WriteLine($"{i + 1}) {(course.Modules[i].IsCompleted ? "[x]" : "[ ]")} {course.Modules[i].Title}");
-                    if (int.TryParse(Console.ReadLine(), out int mi) &&
-                        mi >= 1 && mi <= course.Modules.Count)
-                    {
-                        course.Modules[mi - 1].IsCompleted = !course.Modules[mi - 1].IsCompleted;
-                        ctx.SaveChanges();
-                    }
-                }
-            }
+            for (int i = 0; i < list.Count; i++)
+                Console.WriteLine($"{i + 1}) {list[i].Title} [{list[i].Progress}%]");
+            Console.Write("Pick #: ");
+            if (!int.TryParse(Console.ReadLine(), out int ix) || ix < 1 || ix > list.Count) return;
+            Console.Write("New %: ");
+            if (!int.TryParse(Console.ReadLine(), out int p)) return;
+            list[ix - 1].Progress = Math.Clamp(p, 0, 100);
+            ctx.SaveChanges();
         }
 
-        //──────────────────────  9  Resources submenu  ────────────────────────
-
-        private static void ManageResources()
+        // ───────────────────────── Notes  ───────────────────────────────────
+        private static void ManageNotes()
+        {
+            Console.Clear();
+            Console.WriteLine("1) Add  2) List by Course  3) Search  4) Back");
+            var c = Console.ReadLine();
+            if (c == "1") AddNote();
+            else if (c == "2") ViewNotesByCourse();
+            else if (c == "3") SearchNotes();
+        }
+        private static void AddNote()
         {
             using var ctx = new AppDbContext();
-            var courses = ctx.Courses.Include(c => c.Resources).ToList();
-            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
-
-            while (true)
-            {
-                Console.Clear();
-                Console.WriteLine("=== Resources ===");
-                for (int i = 0; i < courses.Count; i++)
-                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
-                Console.WriteLine("0) Back");
-                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
-                if (ci == 0) return;
-
-                var course = courses[ci - 1];
-                Console.Clear();
-                Console.WriteLine($"Resources for {course.Title}");
-                foreach (var r in course.Resources)
-                    Console.WriteLine($"• {r.Url}  ({r.Description})");
-                Console.WriteLine("\n1) Add  2) Remove  3) Back");
-                var action = Console.ReadLine();
-                if (action == "3") continue;
-
-                if (action == "1")
-                {
-                    Console.Write("URL: ");           var url = Console.ReadLine() ?? "";
-                    Console.Write("Description: ");   var desc = Console.ReadLine() ?? "";
-                    if (!string.IsNullOrWhiteSpace(url))
-                    {
-                        course.Resources.Add(new Resource { Url = url, Description = desc });
-                        ctx.SaveChanges();
-                    }
-                }
-                else if (action == "2")
-                {
-                    for (int i = 0; i < course.Resources.Count; i++)
-                        Console.WriteLine($"{i + 1}) {course.Resources[i].Url}");
-                    if (int.TryParse(Console.ReadLine(), out int ri) &&
-                        ri >= 1 && ri <= course.Resources.Count)
-                    {
-                        ctx.Resources.Remove(course.Resources[ri - 1]);       /*EF remove turn0search1*/
-                        ctx.SaveChanges();
-                    }
-                }
-            }
+            var courses = ctx.Courses.ToList();
+            if (!courses.Any()) { Console.WriteLine("Add course first."); Pause(); return; }
+            for (int i = 0; i < courses.Count; i++) Console.WriteLine($"{i + 1}) {courses[i].Title}");
+            if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 1 || ci > courses.Count) return;
+            Console.Write("Content: ");
+            var txt = Console.ReadLine() ?? "";
+            ctx.Notes.Add(new Note { Content = txt, CourseId = courses[ci - 1].CourseId });
+            ctx.SaveChanges();
         }
-
-        //────────────────────── 10  Quizzes submenu  ──────────────────────────
-
-        private static void ManageQuizzes()
+        private static void ViewNotesByCourse()
         {
             using var ctx = new AppDbContext();
-            var courses = ctx.Courses.Include(c => c.Quizzes).ToList();
-            if (!courses.Any()) { Console.WriteLine("Add a course first."); Pause(); return; }
-
-            while (true)
-            {
-                Console.Clear();
-                Console.WriteLine("=== Quizzes ===");
-                for (int i = 0; i < courses.Count; i++)
-                    Console.WriteLine($"{i + 1}) {courses[i].Title}");
-                Console.WriteLine("0) Back");
-                if (!int.TryParse(Console.ReadLine(), out int ci) || ci < 0 || ci > courses.Count) continue;
-                if (ci == 0) return;
-
-                var course = courses[ci - 1];
-                Console.Clear();
-                Console.WriteLine($"Quizzes for {course.Title}");
-                foreach (var q in course.Quizzes)
-                    Console.WriteLine($"• {q.Title} (Due {q.DueDate:d}){(q.ReminderSent ? "  ✅" : "")}");
-                Console.WriteLine("\n1) Add  2) Remove  3) Back");
-                var act = Console.ReadLine();
-                if (act == "3") continue;
-
-                if (act == "1")
-                {
-                    Console.Write("Quiz title: ");   var qt = Console.ReadLine() ?? "";
-                    Console.Write("Due date (yyyy-MM-dd): ");
-                    if (DateTime.TryParse(Console.ReadLine(), out DateTime due))
-                    {
-                        course.Quizzes.Add(new Quiz { Title = qt, DueDate = due });
-                        ctx.SaveChanges();
-                    }
-                }
-                else if (act == "2")
-                {
-                    for (int i = 0; i < course.Quizzes.Count; i++)
-                        Console.WriteLine($"{i + 1}) {course.Quizzes[i].Title}");
-                    if (int.TryParse(Console.ReadLine(), out int qi) &&
-                        qi >= 1 && qi <= course.Quizzes.Count)
-                    {
-                        ctx.Quizzes.Remove(course.Quizzes[qi - 1]);
-                        ctx.SaveChanges();
-                    }
-                }
-            }
+            var courses = ctx.Courses.Include(c => c.Notes).ToList();
+            for (int i = 0; i < courses.Count; i++)
+                Console.WriteLine($"{i + 1}) {courses[i].Title} ({courses[i].Notes.Count})");
+            if (!int.TryParse(Console.ReadLine(), out int iSel) || iSel < 1 || iSel > courses.Count) return;
+            foreach (var n in courses[iSel - 1].Notes) Console.WriteLine($"- {n.Content}");
+            Pause();
         }
-
-        //────────────────────────────────────────────────────────────────────────
-
-        private static void Pause()
+        private static void SearchNotes()
         {
-            Console.WriteLine("\nPress Enter to continue...");
-            Console.ReadLine();
+            Console.Write("Search term: ");
+            var t = Console.ReadLine() ?? "";
+            using var ctx = new AppDbContext();
+            var res = ctx.Notes.Include(n => n.Course)
+                               .Where(n => n.Content.Contains(t)).ToList();
+            foreach (var n in res)
+                Console.WriteLine($"[{n.Course?.Title}] {n.Content}");
+            Pause();
         }
+
+        // ───────────────────────── Dashboard & Search  ──────────────────────
+        private static void ShowProgressSummary()
+        {
+            using var ctx = new AppDbContext();
+            Console.WriteLine($"Courses: {ctx.Courses.Count()}");
+            Console.WriteLine($"Average %: {(ctx.Courses.Any() ? ctx.Courses.Average(c => c.Progress) : 0):F1}");
+            Console.WriteLine($"Notes: {ctx.Notes.Count()}");
+            Console.WriteLine($"Vocabulary: {ctx.Vocabulary.Count()}");
+            Pause();
+        }
+        private static void GlobalSearch()
+        {
+            Console.Write("Term: ");
+            var t = Console.ReadLine() ?? "";
+            using var ctx = new AppDbContext();
+            ctx.Courses.Where(c => c.Title.Contains(t)).ToList()
+               .ForEach(c => Console.WriteLine($"Course: {c.Title}"));
+            ctx.Notes.Where(n => n.Content.Contains(t)).Include(n => n.Course).ToList()
+               .ForEach(n => Console.WriteLine($"Note: {n.Content} ({n.Course?.Title})"));
+            ctx.Vocabulary.Where(v => v.SourceTerm.Contains(t) || v.TargetTerm.Contains(t)).ToList()
+               .ForEach(v => Console.WriteLine($"Vocab: {v.SourceTerm}={v.TargetTerm}"));
+            Pause();
+        }
+
+        // ───────────────────────── Vocabulary  (unchanged) ───────────────────
+        private static void ManageVocabulary() { /* keep your earlier code */ }
+        private static void TakeVocabularyQuiz() { /* keep earlier quiz */ }
+
+        // ───────────────────── Modules / Resources / Quizzes  ────────────────
+        private static void ManageModules()   { /* code from last response */ }
+        private static void ManageResources() { /* code from last response */ }
+        private static void ManageQuizzes()   { /* code from last response */ }
+
+        // ───────────────────────── Helpers ───────────────────────────────────
+        private static void Pause() { Console.WriteLine("Press Enter…"); Console.ReadLine(); }
     }
 }

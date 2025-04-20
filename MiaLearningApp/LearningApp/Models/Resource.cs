@@ -19,7 +19,7 @@ namespace LearningApp.Models
         /// <summary>
         /// Link to the external resource (URL) or local file path.
         /// </summary>
-        public string Link { get; set; } = string.Empty;
+        public string Url { get; set; } = string.Empty;
 
         /// <summary>
         /// Optional: categorize resource (e.g. \"Video\", \"Document\", \"Website\", etc.).
