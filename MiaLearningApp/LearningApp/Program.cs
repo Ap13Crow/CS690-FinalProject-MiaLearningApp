@@ -188,7 +188,7 @@ namespace LearningApp
             Pause();
         }
 
-        // ───────────────────────── Vocabulary  (unchanged) ───────────────────
+        // ───────────────────────── Vocabulary ───────────────────
         private static void ManageVocabulary()
         {
             while (true)
@@ -211,6 +211,71 @@ namespace LearningApp
                     default:  Console.WriteLine("Bad choice"); Pause(); break;
                 }
             }
+        }
+        private static void AddVocabularyEntry()
+        {
+            Console.Clear();
+            Console.WriteLine("=== Add Vocabulary ===");
+            Console.Write("Source language (blank = English): ");
+            var src = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(src)) src = "English";
+
+            Console.Write("Target language (blank = Spanish): ");
+            var tgt = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(tgt)) tgt = "Spanish";
+
+            Console.Write("Source term (blank to cancel): ");
+            var sTerm = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(sTerm)) { Console.WriteLine("Cancelled."); Pause(); return; }
+
+            Console.Write("Target term: ");          var tTerm = Console.ReadLine() ?? "";
+            Console.Write("Explanation (opt): ");   var expl  = Console.ReadLine() ?? "";
+            Console.Write("Example (opt): ");       var ex    = Console.ReadLine() ?? "";
+
+            using var ctx = new AppDbContext();
+            ctx.Vocabulary.Add(new Vocabulary
+            {
+                SourceLanguage = src,
+                TargetLanguage = tgt,
+                SourceTerm     = sTerm,
+                TargetTerm     = tTerm,
+                Explanation    = expl,
+                Example        = ex,
+                Mastered       = false
+            });
+            ctx.SaveChanges();
+            Console.WriteLine("Saved.");
+            Pause();
+        }
+        private static void ViewAllVocabulary()
+        {
+            Console.Clear();
+            using var ctx = new AppDbContext();
+            var list = ctx.Vocabulary.ToList();
+            if (!list.Any()) { Console.WriteLine("No entries."); Pause(); return; }
+
+            foreach (var v in list)
+            {
+                var mastered = v.Mastered ? "✅" : "";
+                Console.WriteLine($"[{v.SourceLanguage}->{v.TargetLanguage}] {v.SourceTerm} = {v.TargetTerm} {mastered}");
+                if (!string.IsNullOrWhiteSpace(v.Explanation)) Console.WriteLine($"   ▸ {v.Explanation}");
+                if (!string.IsNullOrWhiteSpace(v.Example))     Console.WriteLine($"   ▸ {v.Example}");
+            }
+            Pause();
+        }
+
+        private static void SearchVocabulary()
+        {
+            Console.Write("Search term: ");
+            var term = Console.ReadLine() ?? "";
+            using var ctx = new AppDbContext();
+            var hits = ctx.Vocabulary
+                        .Where(v => v.SourceTerm.Contains(term) || v.TargetTerm.Contains(term))
+                        .ToList();
+            if (!hits.Any()) { Console.WriteLine("No match."); Pause(); return; }
+            foreach (var v in hits)
+                Console.WriteLine($"[{v.SourceLanguage}->{v.TargetLanguage}] {v.SourceTerm} = {v.TargetTerm}");
+            Pause();
         }
 
         private static void TakeVocabularyQuiz()
