@@ -9,6 +9,7 @@
       "LearningApp/1.0.0": {
         "dependencies": {
           "Microsoft.EntityFrameworkCore": "9.0.4",
+          "Microsoft.EntityFrameworkCore.Design": "9.0.4",
           "Microsoft.EntityFrameworkCore.Sqlite": "9.0.4",
           "Microsoft.EntityFrameworkCore.Tools": "9.0.4"
         },
