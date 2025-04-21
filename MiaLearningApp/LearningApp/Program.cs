@@ -13,6 +13,10 @@ namespace LearningApp
 
         static void Main(string[] args)
         {
+            using (var context = new AppDbContext())  // Use your actual context name
+            {
+                context.Database.Migrate();  // This creates missing tables
+            }
             _quizTimer = new Timer(CheckQuizDue, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
 
             while (true)
