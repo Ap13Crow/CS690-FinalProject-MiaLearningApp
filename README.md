@@ -17,26 +17,23 @@ A cross‑platform .NET 8 console application that helps lifelong learners:
 
 ## 🚀 Quick Start
 
-### Download the executable
+### A. Running the application
 
+#### 1. .NET 8.0
+Make sure to install dotnet runtime [[Download .NET 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)]
+
+#### 2. Latest release & download
 Go to the latest release:
 https://github.com/Ap13Crow/CS690-FinalProject-MiaLearningApp/releases
-Download the executable called Source code.zip
-Unzip it in your local directory
+Download the executable called "LearningApp_v2.1.0.zip"
 
-### Running the application
+#### 3. Unzipping
+unzip MiaLearningApp-v2.1.0.zip (or "extract all" on Windows)
 
-Make sure to install dotnet runtime .NET Runtime
-Go inside the directory (CS690-FinalProject-MiaLearningApp-2.0.0) you have unzipped
+#### 4. Launch the application
+Go inside the directory (CS690-FinalProject-MiaLearningApp-2.1.0) you have unzipped (e.g. open in Terminal/Powershell)
 Run the following command in terminal
-dotnet BusShuttle.dll
-```bash
-# download release, then…
-unzip MiaLearningApp-v2.1.0.zip
-cd MiaLearningApp
+'dotnet LearningApp.dll'
 
-# launch on Windows (self‑contained exe)
-publish-win/LearningApp.exe
-
-# launch on macOS/Linux/Windows if .NET 8 runtime is present
-dotnet publish/fdd/MiaLearningApp.dll   # runtime list: dotnet --list-runtimes
+### B. Using the application
+Check out the user documentation in the wiki : [[User documentation](https://github.com/Ap13Crow/CS690-FinalProject-MiaLearningApp/wiki/User-Documentation)]
